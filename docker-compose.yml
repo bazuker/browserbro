@@ -1,0 +1,25 @@
+services:
+  browser:
+    image: ghcr.io/go-rod/rod:latest
+    hostname: browser
+    environment:
+      GET_HOSTS_FROM: dns
+    ports:
+      - 7317:7317
+    networks:
+      - browserBroNetwork
+  api:
+    build: .
+    environment:
+      GET_HOSTS_FROM: dns
+    ports:
+      - 10001:10001
+      - 8889:8889
+    depends_on:
+      - browser
+    networks:
+      - browserBroNetwork
+
+networks:
+  browserBroNetwork:
+    driver: "bridge"

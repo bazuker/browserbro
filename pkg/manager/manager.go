@@ -30,7 +30,7 @@ type connector interface {
 }
 
 type Config struct {
-	// ServerAddress is server HTTP address
+	// ServerAddress is server HTTP address.
 	ServerAddress string
 	// ServerCORS is cross-origin resource sharing configuration
 	ServerCORS *cors.Config

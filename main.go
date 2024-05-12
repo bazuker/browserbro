@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	localFS "github.com/bazuker/browserbro/pkg/fs/local"
@@ -12,28 +13,86 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type config struct {
+	ServerAddress         string
+	BrowserServerID       int
+	BrowserServiceURL     string
+	BrowserMonitorEnabled bool
+	UserDataDir           string
+	FileStoreBasePath     string
+}
+
+func readConfigFromEnvironment(cfg *config) {
+	serverAddress := os.Getenv("BROWSERBRO_SERVER_ADDRESS")
+	if serverAddress != "" {
+		cfg.ServerAddress = serverAddress
+	}
+	browserServerID := os.Getenv("BROWSERBRO_BROWSER_SERVER_ID")
+	if browserServerID != "" {
+		i, err := strconv.Atoi(browserServerID)
+		if err != nil {
+			log.Fatal().Err(err).
+				Msg("failed to parse 'BROWSERBRO_BROWSER_SERVER_ID' environment variable")
+			return
+		}
+		cfg.BrowserServerID = i
+	}
+	browserServiceURL := os.Getenv("BROWSERBRO_BROWSER_SERVICE_URL")
+	if browserServiceURL != "" {
+		cfg.BrowserServiceURL = browserServiceURL
+	}
+	browserMonitorEnabled := os.Getenv("BROWSERBRO_BROWSER_MONITOR_ENABLED")
+	if browserMonitorEnabled != "" {
+		b, err := strconv.ParseBool(browserMonitorEnabled)
+		if err != nil {
+			log.Fatal().Err(err).
+				Msg("failed to parse 'BROWSERBRO_BROWSER_MONITOR_ENABLED' environment variable")
+			return
+		}
+		cfg.BrowserMonitorEnabled = b
+	}
+	userDataDir := os.Getenv("BROWSERBRO_USER_DATA_DIR")
+	if userDataDir != "" {
+		cfg.UserDataDir = userDataDir
+	}
+	fileStoreBasePath := os.Getenv("BROWSERBRO_FILE_STORE_BASE_PATH")
+	if fileStoreBasePath != "" {
+		cfg.FileStoreBasePath = fileStoreBasePath
+	}
+}
+
 func main() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	gin.SetMode(gin.ReleaseMode)
 
+	cfg := config{
+		ServerAddress:         ":10001",
+		UserDataDir:           "/tmp/rod/user-data/browserBro_userData",
+		FileStoreBasePath:     "/tmp/browserBro_files",
+		BrowserServerID:       1,
+		BrowserServiceURL:     "ws://localhost:7317",
+		BrowserMonitorEnabled: true,
+	}
+	readConfigFromEnvironment(&cfg)
+
 	fileStore, err := localFS.New(localFS.Config{
-		BasePath: "/tmp/browserBro_files",
+		BasePath: cfg.FileStoreBasePath,
 	})
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to initialize file store")
 		return
 	}
 
-	serverAddress := ":10001"
 	m := manager.New(manager.Config{
-		ServerAddress:         serverAddress,
 		FileStore:             fileStore,
-		BrowserServiceURL:     "ws://localhost:7317",
-		UserDataDir:           "/tmp/rod/user-data/browserBro_userData",
-		BrowserMonitorEnabled: true,
+		UserDataDir:           cfg.UserDataDir,
+		ServerAddress:         cfg.ServerAddress,
+		BrowserServerID:       cfg.BrowserServerID,
+		BrowserServiceURL:     cfg.BrowserServiceURL,
+		BrowserMonitorEnabled: cfg.BrowserMonitorEnabled,
 	})
 
-	log.Info().Msg("running API server on " + serverAddress)
+	log.Info().Msg("running API server on " + cfg.ServerAddress)
 
 	if err := m.Run(); err != nil {
 		log.Fatal().Err(err).Msg("error running the API server")

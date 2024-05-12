@@ -4,14 +4,13 @@ services:
     hostname: browser
     environment:
       GET_HOSTS_FROM: dns
-    ports:
-      - 7317:7317
     networks:
       - browserBroNetwork
   api:
     build: .
     environment:
       GET_HOSTS_FROM: dns
+      BROWSERBRO_BROWSER_SERVICE_URL: ws://browser:7317
     ports:
       - 10001:10001
       - 8889:8889

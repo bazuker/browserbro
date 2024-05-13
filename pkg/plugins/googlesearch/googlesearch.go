@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"runtime/debug"
 	"strings"
 	"time"
 
@@ -77,7 +76,6 @@ func (p *GoogleSearch) Run(params map[string]any) (output map[string]any, err er
 	page := stealthPage.Context(ctx)
 
 	defer func() {
-		fmt.Println(string(debug.Stack()))
 		if r := recover(); r != nil {
 			err = fmt.Errorf("failed to complete: %v", r)
 		}
@@ -93,51 +91,57 @@ func (p *GoogleSearch) Run(params map[string]any) (output map[string]any, err er
 	urlParams := url.Values{}
 	urlParams.Set("q", queryString)
 
-	if searchTypesMap["all"] {
+	if searchTypesMap["all"] || searchTypesMap["videos"] {
+		searchKey := "all"
+		if searchTypesMap["videos"] {
+			urlParams.Set("tbm", "vid")
+			searchKey = "videos"
+		}
 		err = page.Navigate("https://www.google.com/search?" + urlParams.Encode())
 		if err != nil {
 			return nil, fmt.Errorf("failed to navigate to 'all' page: %w", err)
 		}
-		page.MustWaitLoad()
-
-		blocks := page.MustElements(".g")
-		searchResults := make([]map[string]any, 0, len(blocks))
-		for _, block := range blocks {
-			link := block.MustElement("a").MustAttribute("href")
-			title := block.MustElement("h3").MustText()
-			spans := block.MustElements("span")
-			description := spans[len(spans)-1].MustText()
-			searchResults = append(searchResults, map[string]any{
-				"link":        link,
-				"title":       title,
-				"description": description,
-			})
-		}
-		output["all"] = searchResults
-	}
-
-	if searchTypesMap["videos"] {
-		urlParams.Set("tbm", "vid")
-		err = page.Navigate("https://www.google.com/search?" + urlParams.Encode())
+		err = page.WaitLoad()
 		if err != nil {
-			return nil, fmt.Errorf("failed to navigate to 'videos' page: %w", err)
+			return nil, fmt.Errorf("failed to wait for page to load: %w", err)
 		}
-		page.MustWaitLoad()
-
-		blocks := page.MustElements(".g")
+		blocks, err := page.Elements(".g")
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse search results: %w", err)
+		}
 		searchResults := make([]map[string]any, 0, len(blocks))
 		for _, block := range blocks {
-			link := block.MustElement("a").MustAttribute("href")
-			title := block.MustElement("h3").MustText()
-			spans := block.MustElements("span")
-			description := spans[len(spans)-1].MustText()
+			href, err := block.Element("a")
+			if err != nil {
+				continue
+			}
+			link, err := href.Attribute("href")
+			if err != nil {
+				continue
+			}
+			h3, err := block.Element("h3")
+			if err != nil {
+				continue
+			}
+			title, err := h3.Text()
+			if err != nil {
+				continue
+			}
+			spans, err := block.Elements("span")
+			if err != nil {
+				continue
+			}
+			description, err := spans[len(spans)-1].Text()
+			if err != nil {
+				description = ""
+			}
 			searchResults = append(searchResults, map[string]any{
 				"link":        link,
 				"title":       title,
 				"description": description,
 			})
 		}
-		output["videos"] = searchResults
+		output[searchKey] = searchResults
 	}
 
 	return output, nil

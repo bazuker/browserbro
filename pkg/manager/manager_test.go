@@ -9,64 +9,123 @@ import (
 
 	"github.com/bazuker/browserbro/pkg/fs/mock"
 	"github.com/bazuker/browserbro/pkg/plugins"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
-	fs := &mock.FileStore{}
-	cfg := Config{
-		ServerAddress:         ":10001",
-		ServerCORS:            nil,
-		FileStore:             fs,
-		BrowserServerID:       1,
-		BrowserServiceURL:     "ws://example.com:7317",
-		UserDataDir:           "/tmp/my_data",
-		BrowserMonitorEnabled: true,
-	}
-	m := New(cfg)
-	require.NotNil(t, m)
+	t.Run("default config", func(t *testing.T) {
+		fs := &mock.FileStore{}
+		cfg := Config{
+			ServerAddress: ":10001",
+			FileStore:     fs,
+			Plugins: []plugins.Plugin{
+				&mockPlugin{name: "test"},
+			},
+		}
+		m, err := New(cfg)
+		require.NoError(t, err)
+		require.NotNil(t, m)
 
-	assert.NotNil(t, m.router)
-	assert.NotNil(t, m.browser)
+		assert.NotNil(t, m.router)
+		assert.Equal(t, ":10001", m.server.Addr)
+		assert.NotNil(t, m.cors)
+		assert.Equal(t, fs, m.fileStore)
+		require.Implements(t, (*connector)(nil), m.browserConnector)
+		bc := m.browserConnector.(*browserConnector)
+		assert.Equal(t, 1, bc.serverID)
+		assert.Equal(t, "ws://127.0.0.1:7317", bc.serviceURL)
+		assert.Equal(t, "/tmp/rod/user-data/browserBro_userData", bc.userDataDir)
+		assert.False(t, bc.browserMonitoringEnabled)
+	})
 
-	assert.Equal(t, ":10001", m.cfg.ServerAddress)
-	assert.NotNil(t, m.cfg.ServerCORS)
-	assert.Equal(t, fs, m.cfg.FileStore)
-	assert.Equal(t, 1, m.cfg.BrowserServerID)
-	assert.Equal(t, "ws://example.com:7317", m.cfg.BrowserServiceURL)
-	assert.Equal(t, "/tmp/my_data", m.cfg.UserDataDir)
-	assert.True(t, m.cfg.BrowserMonitorEnabled)
+	t.Run("custom properties", func(t *testing.T) {
+		corsCfg := cors.DefaultConfig()
+		corsCfg.AllowOrigins = []string{"custom.example.com"}
+		g := gin.New()
+		plugin := &mockPlugin{name: "test"}
+		cfg := Config{
+			ServerAddress:         ":10001",
+			ServerCORS:            &corsCfg,
+			FileStore:             &mock.FileStore{},
+			Router:                g,
+			BrowserMonitorEnabled: true,
+			BrowserServiceURL:     "ws://example.com:7317",
+			BrowserUserDataDir:    "/tmp/rod/user-data/my/data",
+			Plugins: []plugins.Plugin{
+				plugin,
+			},
+		}
+		m, err := New(cfg)
+		require.NoError(t, err)
+		require.NotNil(t, m)
+
+		assert.Equal(t, corsCfg, m.cors)
+		assert.Equal(t, g, m.router)
+		bc := m.browserConnector.(*browserConnector)
+		assert.Equal(t, 1, bc.serverID)
+		assert.Equal(t, "ws://example.com:7317", bc.serviceURL)
+		assert.Equal(t, "/tmp/rod/user-data/my/data", bc.userDataDir)
+		assert.True(t, bc.browserMonitoringEnabled)
+		require.Len(t, m.plugins, 1)
+		assert.Equal(t, plugin, m.plugins[0])
+	})
+
+	t.Run("missing server address", func(t *testing.T) {
+		_, err := New(Config{})
+		require.Error(t, err)
+		assert.EqualError(t, err, "server address is required")
+	})
+
+	t.Run("missing file store", func(t *testing.T) {
+		_, err := New(Config{
+			ServerAddress: ":10001",
+		})
+		require.Error(t, err)
+		assert.EqualError(t, err, "file store is required")
+	})
+
+	t.Run("missing plugins", func(t *testing.T) {
+		_, err := New(Config{
+			ServerAddress: ":10001",
+			FileStore:     &mock.FileStore{},
+		})
+		require.Error(t, err)
+		assert.EqualError(t, err, "at least one plugin is required")
+	})
 }
 
 func TestManager_Start(t *testing.T) {
 	var pluginRunCalled bool
-	plugins.AddCustom(&mockPlugin{
-		name: "test",
-		runFn: func(params map[string]interface{}) (
-			map[string]interface{},
-			error,
-		) {
-			pluginRunCalled = true
-			return nil, nil
-		},
-	})
-	plugins.AddCustom(&mockPlugin{
-		name: "error",
-		runFn: func(params map[string]interface{}) (
-			map[string]interface{},
-			error,
-		) {
-			return nil, fmt.Errorf("plugin error")
-		},
-	})
-
-	m := New(Config{
+	m, err := New(Config{
 		ServerAddress:     ":10001",
 		BrowserServiceURL: "ws://example.com:7317",
 		FileStore:         &mock.FileStore{},
+		Plugins: []plugins.Plugin{
+			&mockPlugin{
+				name: "test",
+				runFn: func(params map[string]interface{}) (
+					map[string]interface{},
+					error,
+				) {
+					pluginRunCalled = true
+					return nil, nil
+				},
+			},
+			&mockPlugin{
+				name: "error",
+				runFn: func(params map[string]interface{}) (
+					map[string]interface{},
+					error,
+				) {
+					return nil, fmt.Errorf("plugin error")
+				},
+			},
+		},
 	})
+	require.NoError(t, err)
 	// Use mock connector to avoid actual browser service dialing.
 	m.browserConnector = &mockConnector{}
 

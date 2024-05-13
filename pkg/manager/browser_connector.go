@@ -72,12 +72,6 @@ func newManagedLauncher(
 			err = fmt.Errorf("failed to run managed browser: %v", r)
 		}
 	}()
-	if serviceURL == "" {
-		serviceURL = "ws://browser:7317"
-	}
-	if userDataDir == "" {
-		userDataDir = "/tmp/rod/user-data/browserBro_userData"
-	}
 	l = launcher.MustNewManaged(serviceURL).
 		UserDataDir(userDataDir).
 		Headless(false).

@@ -36,21 +36,21 @@ func (p *BotCheck) Name() string {
 }
 
 func (p *BotCheck) Run(params map[string]any) (output map[string]any, err error) {
-
 	var stealthPage *rod.Page
 	stealthPage, err = stealth.Page(p.browser)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create stealth page: %w", err)
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	page := stealthPage.Context(ctx)
+
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("failed to complete: %v", r)
 		}
-		_ = stealthPage.Close()
+		_ = page.Close()
 	}()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	page := stealthPage.Context(ctx)
 
 	urlsList, ok := params["urls"].([]any)
 	if !ok {

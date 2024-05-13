@@ -1,6 +1,11 @@
 package main
 
 import (
+	"github.com/bazuker/browserbro/pkg/fs"
+	"github.com/bazuker/browserbro/pkg/plugins"
+	"github.com/bazuker/browserbro/pkg/plugins/googlesearch"
+	"github.com/bazuker/browserbro/pkg/plugins/screenshot"
+	"github.com/go-rod/rod"
 	"os"
 	"os/signal"
 	"strconv"
@@ -20,6 +25,61 @@ type config struct {
 	BrowserMonitorEnabled bool
 	UserDataDir           string
 	FileStoreBasePath     string
+}
+
+func main() {
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	gin.SetMode(gin.ReleaseMode)
+
+	cfg := config{
+		ServerAddress:         ":10001",
+		UserDataDir:           "/tmp/rod/user-data/browserBro_userData",
+		FileStoreBasePath:     "/tmp/browserBro_files",
+		BrowserServerID:       1,
+		BrowserServiceURL:     "ws://localhost:7317",
+		BrowserMonitorEnabled: true,
+	}
+	readConfigFromEnvironment(&cfg)
+
+	fileStore, err := localFS.New(localFS.Config{
+		BasePath: cfg.FileStoreBasePath,
+	})
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to initialize file store")
+		return
+	}
+
+	browser := rod.New()
+	allPlugins := initPlugins(browser, fileStore)
+	m, err := manager.New(manager.Config{
+		ServerAddress:         cfg.ServerAddress,
+		FileStore:             fileStore,
+		Browser:               browser,
+		BrowserUserDataDir:    cfg.UserDataDir,
+		BrowserServerID:       cfg.BrowserServerID,
+		BrowserServiceURL:     cfg.BrowserServiceURL,
+		BrowserMonitorEnabled: cfg.BrowserMonitorEnabled,
+		Plugins:               allPlugins,
+	})
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to initialize manager")
+		return
+	}
+
+	log.Info().Msg("running API server on " + cfg.ServerAddress)
+
+	if err := m.Run(); err != nil {
+		log.Fatal().Err(err).Msg("error running the API server")
+	}
+
+	quit := make(chan os.Signal, 1)
+	// Signal notification for Interrupt (Ctrl+C) and SIGTERM (Termination signal from the OS)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	if err := m.Stop(); err != nil {
+		log.Fatal().Err(err).Msg("error stopping the API server")
+	}
 }
 
 func readConfigFromEnvironment(cfg *config) {
@@ -61,49 +121,9 @@ func readConfigFromEnvironment(cfg *config) {
 	}
 }
 
-func main() {
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	gin.SetMode(gin.ReleaseMode)
-
-	cfg := config{
-		ServerAddress:         ":10001",
-		UserDataDir:           "/tmp/rod/user-data/browserBro_userData",
-		FileStoreBasePath:     "/tmp/browserBro_files",
-		BrowserServerID:       1,
-		BrowserServiceURL:     "ws://localhost:7317",
-		BrowserMonitorEnabled: true,
-	}
-	readConfigFromEnvironment(&cfg)
-
-	fileStore, err := localFS.New(localFS.Config{
-		BasePath: cfg.FileStoreBasePath,
-	})
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to initialize file store")
-		return
-	}
-
-	m := manager.New(manager.Config{
-		FileStore:             fileStore,
-		UserDataDir:           cfg.UserDataDir,
-		ServerAddress:         cfg.ServerAddress,
-		BrowserServerID:       cfg.BrowserServerID,
-		BrowserServiceURL:     cfg.BrowserServiceURL,
-		BrowserMonitorEnabled: cfg.BrowserMonitorEnabled,
-	})
-
-	log.Info().Msg("running API server on " + cfg.ServerAddress)
-
-	if err := m.Run(); err != nil {
-		log.Fatal().Err(err).Msg("error running the API server")
-	}
-
-	quit := make(chan os.Signal, 1)
-	// Signal notification for Interrupt (Ctrl+C) and SIGTERM (Termination signal from the OS)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	if err := m.Stop(); err != nil {
-		log.Fatal().Err(err).Msg("error stopping the API server")
+func initPlugins(browser *rod.Browser, fileStore fs.FileStore) []plugins.Plugin {
+	return []plugins.Plugin{
+		googlesearch.New(browser),
+		screenshot.New(browser, fileStore),
 	}
 }

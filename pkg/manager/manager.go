@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -19,9 +20,9 @@ import (
 type Manager struct {
 	server           *http.Server
 	router           *gin.Engine
-	cfg              Config
+	fileStore        fs.FileStore
+	cors             cors.Config
 	plugins          []pluginsRegistry.Plugin
-	browser          *rod.Browser
 	browserConnector connector
 }
 
@@ -30,59 +31,86 @@ type connector interface {
 }
 
 type Config struct {
-	// ServerAddress is server HTTP address.
+	// ServerAddress is server HTTP address (required).
 	ServerAddress string
 	// ServerCORS is cross-origin resource sharing configuration
 	ServerCORS *cors.Config
-	// FileStore is a file storage provider interface.
+	// FileStore is a file storage provider interface (required).
 	FileStore fs.FileStore
+	// Router is a Gin router instance.
+	Router *gin.Engine
+	// Browser is a Rod browser instance.
+	Browser *rod.Browser
 	// BrowserServerID is a unique identifier for the browser server.
 	BrowserServerID int
 	// BrowserServiceURL is the URL of the browser service.
 	BrowserServiceURL string
-	// UserDataDir is the directory where the browser stores its data in the browser service.
-	UserDataDir string
+	// BrowserUserDataDir is the directory where the browser stores its data in the browser service.
+	BrowserUserDataDir string
 	// BrowserMonitorEnabled enables the browser monitor.
 	BrowserMonitorEnabled bool
+	// Plugins is a list of plugins to load.
+	Plugins []pluginsRegistry.Plugin
 }
 
-func New(cfg Config) *Manager {
+func New(cfg Config) (*Manager, error) {
+	// Required configurations.
+	if cfg.ServerAddress == "" {
+		return nil, errors.New("server address is required")
+	}
+	if cfg.FileStore == nil {
+		return nil, errors.New("file store is required")
+	}
+	if len(cfg.Plugins) == 0 {
+		return nil, errors.New("at least one plugin is required")
+	}
+
+	// Optional configurations.
 	if cfg.ServerCORS == nil {
 		corsCfg := cors.DefaultConfig()
 		corsCfg.AllowOrigins = []string{"*"}
 		corsCfg.AllowHeaders = []string{"*"}
 		cfg.ServerCORS = &corsCfg
 	}
-
-	browser := rod.New()
-	router := gin.New()
+	if cfg.Browser == nil {
+		cfg.Browser = rod.New()
+	}
+	if cfg.BrowserServerID <= 0 {
+		cfg.BrowserServerID = 1
+	}
+	if cfg.BrowserServiceURL == "" {
+		cfg.BrowserServiceURL = "ws://127.0.0.1:7317"
+	}
+	if cfg.BrowserUserDataDir == "" {
+		cfg.BrowserUserDataDir = "/tmp/rod/user-data/browserBro_userData"
+	}
+	if cfg.Router == nil {
+		cfg.Router = gin.New()
+	}
 
 	return &Manager{
-		router:  router,
-		browser: browser,
-		cfg:     cfg,
+		router:    cfg.Router,
+		fileStore: cfg.FileStore,
+		cors:      *cfg.ServerCORS,
+		plugins:   cfg.Plugins,
 		browserConnector: newBrowserConnector(
-			browser,
+			cfg.Browser,
 			cfg.BrowserServerID,
 			cfg.BrowserServiceURL,
-			cfg.UserDataDir,
+			cfg.BrowserUserDataDir,
 			cfg.BrowserMonitorEnabled,
 		),
 		server: &http.Server{
 			Addr:    cfg.ServerAddress,
-			Handler: router,
+			Handler: cfg.Router,
 		},
-		plugins: pluginsRegistry.Initialize(
-			browser,
-			cfg.FileStore,
-		),
-	}
+	}, nil
 }
 
 func (m *Manager) Run() error {
 	m.router.Use(loggerMiddleware(&log.Logger))
 	m.router.Use(gin.Recovery())
-	m.router.Use(cors.New(*m.cfg.ServerCORS))
+	m.router.Use(cors.New(m.cors))
 
 	m.router.NoRoute(func(c *gin.Context) {
 		c.JSON(
@@ -94,7 +122,6 @@ func (m *Manager) Run() error {
 	api := m.router.Group("/api")
 	v1 := api.Group("/v1")
 	v1.GET("/health", healthcheck.Healthcheck)
-	v1.Use(contextMiddleware(m.cfg.FileStore))
 
 	pluginsGroup := v1.Group("/plugins")
 	pluginsGroup.GET("", func(c *gin.Context) {
@@ -111,6 +138,7 @@ func (m *Manager) Run() error {
 	}
 
 	fsGroup := v1.Group("/files")
+	fsGroup.Use(contextMiddleware(m.fileStore))
 	fsGroup.GET("/:filename", fsEndpoints.Get)
 	fsGroup.DELETE("/:filename", fsEndpoints.Delete)
 

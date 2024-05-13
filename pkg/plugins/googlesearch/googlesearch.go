@@ -1,10 +1,13 @@
 package googlesearch
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
+	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/stealth"
@@ -15,12 +18,14 @@ const (
 )
 
 type GoogleSearch struct {
-	browser *rod.Browser
+	browser          *rod.Browser
+	maxTimePerSearch time.Duration
 }
 
 func New(browser *rod.Browser) *GoogleSearch {
 	return &GoogleSearch{
-		browser: browser,
+		browser:          browser,
+		maxTimePerSearch: 15 * time.Second,
 	}
 }
 
@@ -28,8 +33,7 @@ func (p *GoogleSearch) Name() string {
 	return pluginName
 }
 
-func (p *GoogleSearch) Run(params map[string]any) (map[string]any, error) {
-
+func (p *GoogleSearch) Run(params map[string]any) (output map[string]any, err error) {
 	query, ok := params["query"]
 	if !ok {
 		return nil, errors.New("missing 'query' parameter")
@@ -63,13 +67,29 @@ func (p *GoogleSearch) Run(params map[string]any) (map[string]any, error) {
 		searchTypesMap["all"] = true
 	}
 
-	page, err := stealth.Page(p.browser)
+	var stealthPage *rod.Page
+	stealthPage, err = stealth.Page(p.browser)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create stealth page: %w", err)
 	}
-	defer page.MustClose()
 
-	output := make(map[string]any)
+	ctx, cancel := context.WithCancel(context.Background())
+	page := stealthPage.Context(ctx)
+
+	defer func() {
+		fmt.Println(string(debug.Stack()))
+		if r := recover(); r != nil {
+			err = fmt.Errorf("failed to complete: %v", r)
+		}
+		_ = page.Close()
+	}()
+
+	go func() {
+		time.Sleep(p.maxTimePerSearch)
+		cancel()
+	}()
+
+	output = make(map[string]any)
 	urlParams := url.Values{}
 	urlParams.Set("q", queryString)
 

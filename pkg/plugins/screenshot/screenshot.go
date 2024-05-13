@@ -83,9 +83,15 @@ func (p *BotCheck) Run(params map[string]any) (output map[string]any, err error)
 			return nil, fmt.Errorf("failed to navigate to the page '%s': %w", urlString, err)
 		}
 
-		page.MustWaitLoad()
+		err = page.WaitLoad()
+		if err != nil {
+			return nil, fmt.Errorf("failed to wait for page to load: %w", err)
+		}
 		if waitStable {
-			page.MustWaitStable()
+			err = page.WaitStable(time.Second)
+			if err != nil {
+				return nil, fmt.Errorf("failed to wait for page to stabilize: %w", err)
+			}
 		}
 
 		filename := helper.GenerateRandomString(6) + ".screenshot.png"

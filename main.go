@@ -1,19 +1,19 @@
 package main
 
 import (
-	"github.com/bazuker/browserbro/pkg/fs"
-	"github.com/bazuker/browserbro/pkg/plugins"
-	"github.com/bazuker/browserbro/pkg/plugins/googlesearch"
-	"github.com/bazuker/browserbro/pkg/plugins/screenshot"
-	"github.com/go-rod/rod"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
 
+	"github.com/bazuker/browserbro/pkg/fs"
 	localFS "github.com/bazuker/browserbro/pkg/fs/local"
 	"github.com/bazuker/browserbro/pkg/manager"
+	"github.com/bazuker/browserbro/pkg/plugins"
+	"github.com/bazuker/browserbro/pkg/plugins/googlesearch"
+	"github.com/bazuker/browserbro/pkg/plugins/screenshot"
 	"github.com/gin-gonic/gin"
+	"github.com/go-rod/rod"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )

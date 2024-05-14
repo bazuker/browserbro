@@ -77,3 +77,7 @@ To check if the server is running, you can send a GET request to the health chec
 ```
 GET /api/v1/health
 ```
+
+## API Clients
+
+- [Golang client](https://github.com/bazuker/browserbro-go-api)

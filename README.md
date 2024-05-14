@@ -1,8 +1,8 @@
 # BrowserBro 😎
 BrowserBro is a simple HTTP server and a collection of plugins that are useful for web scraping, testing and many other things.
-At its core, BrowserBro is using [Rod](https://github.com/go-rod/rod), a high-level Go browser automation library.
+With browserBro you can turn any website into an API.
 
-The goal of BrowserBro is to provide a simple yet powerful way to run browser automation scripts, without the need to manage the browser lifecycle.
+At its core, BrowserBro is using [Rod](https://github.com/go-rod/rod), a high-level Go browser automation library.
 
 ## Plugins ⚙️
 BrowserBro comes with a collection of plugins that can be used to perform various tasks.
@@ -25,7 +25,7 @@ Response:
   "googlesearch": {
     "all": [
       {
-        "description": "A weekly newsletter about the Go programming language ... Check out our latest issue for a sample. ... Our privacy, anti-spam, and GDPR policies. We take these ...",
+        "description": "A weekly newsletter about the Go programming language ...",
         "link": "https://golangweekly.com/",
         "title": "Golang Weekly"
       },
@@ -42,19 +42,8 @@ To get a list of all available plugins:
 GET /api/v1/plugins
 ```
 
-#### Google Search
-Name: `googlesearch`
-
-Parameters:
-- `query` [String] - The search query
-- `type` [Strings array] - The type of search results to return. Possible values: `all`, `videos`
-
-#### Screenshot
-Name: `screenshot`
-
-Parameters:
-- `urls` [Strings array] - The URLs is list of links to the pages to take screenshots of. Can be a single URL or a list of URLs.
-- `waitStable` [Boolean] - Wait until the page is stable before taking a screenshot. Default: `true`
+1. [Google search](pkg%2Fplugins%2Fgooglesearch%2FREADME.md)
+2. [Screenshot](pkg%2Fplugins%2Fscreenshot%2FREADME.md)
 
 ## Files 📁
 BrowserBro can also serve static files generated or downloaded by the plugins.
@@ -82,7 +71,6 @@ You can then access the files by sending a GET request to the file URL.
 ```bash
 curl http://localhost:10001/api/v1/files/Shu2vLZm.screenshot.png
 ```
-
 
 ## Health Check
 To check if the server is running, you can send a GET request to the health check endpoint.

@@ -56,7 +56,7 @@ func (p *GoogleSearch) Run(params map[string]any) (output map[string]any, err er
 			}
 			loweredType := strings.ToLower(typeString)
 			switch loweredType {
-			case "all", "images", "news", "videos":
+			case "all", "videos":
 				searchTypesMap[loweredType] = true
 			default:
 				return nil, errors.New("invalid search type: " + typeString)

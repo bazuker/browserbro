@@ -4,6 +4,42 @@ With browserBro you can turn any website into an API.
 
 At its core, BrowserBro is using [Rod](https://github.com/go-rod/rod), a high-level Go browser automation library.
 
+## Getting started
+
+First, clone the repository and navigate to the project directory.
+
+To run the project you will need to install [Docker](https://docker.com).
+
+#### Docker
+```bash
+docker-compose up --build -d
+```
+The command above will start two containers: the API server and the browser server.
+The API server is this project, and the browser server (Rod) [is pre-built](https://github.com/go-rod/rod/pkgs/container/rod). 
+
+#### Manual
+Alternatively, you can build the project manually and run the browser server separately.
+```bash
+go build main.go
+```
+
+#### Environment variables
+You can configure the server by setting the following environment variables:
+
+`BROWSERBRO_SERVER_ADDRESS` - the address the API server will listen on (default: `:10001`)
+
+`BROWSERBRO_FILE_STORE_BASE_PATH` - the directory where the files will be stored on the API server (default: `/tmp/browserBro_files`)
+
+`BROWSERBRO_BROWSER_SERVICE_URL` - the address of the browser server (default: `ws://localhost:7317`)
+
+`BROWSERBRO_BROWSER_SERVER_ID` - the ID of the browser server. Only necessary if are running multiple browser instances (default: `1`)
+
+`BROWSERBRO_BROWSER_MONITOR_ENABLED` - enable/disable the browser monitor. Useful for debugging (default: `true`)
+
+`BROWSERBRO_BROWSER_USER_DATA_DIR` - the directory where the browser data will be stored on the browser server (default: `/tmp/rod/user-data/browserBro_userData`)
+
+
+
 ## Plugins ⚙️
 BrowserBro comes with a collection of plugins that can be used to perform various tasks.
 The plugins are loaded dynamically, so you can easily extend the functionality of BrowserBro by adding your own plugins.

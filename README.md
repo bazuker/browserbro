@@ -8,7 +8,7 @@ At its core, BrowserBro is using [Rod](https://github.com/go-rod/rod), a high-le
 
 First, clone the repository and navigate to the project directory.
 
-To run the project you will need to install [Docker](https://docker.com).
+To run the project you will need to install [Docker](https://www.docker.com/get-started/).
 
 #### Docker
 ```bash
@@ -32,13 +32,11 @@ You can configure the server by setting the following environment variables:
 
 `BROWSERBRO_BROWSER_SERVICE_URL` - the address of the browser server (default: `ws://localhost:7317`)
 
-`BROWSERBRO_BROWSER_SERVER_ID` - the ID of the browser server. Only necessary if are running multiple browser instances (default: `1`)
+`BROWSERBRO_BROWSER_SERVER_ID` - the ID of the browser server. Only necessary if you are running multiple browser instances (default: `1`)
 
 `BROWSERBRO_BROWSER_MONITOR_ENABLED` - enable/disable the browser monitor. Useful for debugging (default: `true`)
 
 `BROWSERBRO_BROWSER_USER_DATA_DIR` - the directory where the browser data will be stored on the browser server (default: `/tmp/rod/user-data/browserBro_userData`)
-
-
 
 ## Plugins ⚙️
 BrowserBro comes with a collection of plugins that can be used to perform various tasks.

@@ -111,7 +111,7 @@ func readConfigFromEnvironment(cfg *config) {
 		}
 		cfg.BrowserMonitorEnabled = b
 	}
-	userDataDir := os.Getenv("BROWSERBRO_USER_DATA_DIR")
+	userDataDir := os.Getenv("BROWSERBRO_BROWSER_USER_DATA_DIR")
 	if userDataDir != "" {
 		cfg.UserDataDir = userDataDir
 	}

@@ -15,10 +15,10 @@ To run the project you will need to install [Docker](https://docker.com).
 docker-compose up --build -d
 ```
 The command above will start two containers: the API server and the browser server.
-The API server is this project, and the browser server (Rod) [is pre-built](https://github.com/go-rod/rod/pkgs/container/rod). 
+The API server is this project, and the browser server is [Rod](https://github.com/go-rod/rod) and [is pre-built](https://github.com/go-rod/rod/pkgs/container/rod). 
 
-#### Manual
-Alternatively, you can build the project manually and run the browser server separately.
+#### Manually
+Alternatively, you can build the project manually and run the browser server separately in any way you want.
 ```bash
 go build main.go
 ```

@@ -1,4 +1,4 @@
-# Google search
+# Google search 🔍
 
 Name: `googlesearch`
 

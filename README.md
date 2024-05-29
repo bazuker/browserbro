@@ -39,8 +39,9 @@ You can configure the server by setting the following environment variables:
 `BROWSERBRO_BROWSER_USER_DATA_DIR` - the directory where the browser data will be stored on the browser server (default: `/tmp/rod/user-data/browserBro_userData`)
 
 ## Plugins ⚙️
-BrowserBro comes with a collection of plugins that can be used to perform various tasks.
-The plugins are loaded dynamically, so you can easily extend the functionality of BrowserBro by adding your own plugins.
+Plugins in context of the BrowserBro are automation scripts used to control the browser and perform various tasks.
+BrowserBro comes with a basic collection of plugins that are maintained by the contributors.
+If you want to create a plugin yourself to do something specific and/or contribute to the plugins collection - [read more here](pkg%2Fplugins%2FREADME.md)
 
 Plugins are available as HTTP endpoints and can be accessed by sending a POST request to the server.
 You can supply the plugin with the necessary parameters in the request body.

@@ -15,6 +15,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestDefaultManagerConfig(t *testing.T) {
+	m, err := DefaultManagerConfig()
+	require.NoError(t, err)
+	require.NotNil(t, m)
+}
+
 func TestNew(t *testing.T) {
 	t.Run("default config", func(t *testing.T) {
 		fs := &mock.FileStore{}
@@ -85,15 +91,6 @@ func TestNew(t *testing.T) {
 		})
 		require.Error(t, err)
 		assert.EqualError(t, err, "file store is required")
-	})
-
-	t.Run("missing plugins", func(t *testing.T) {
-		_, err := New(Config{
-			ServerAddress: ":10001",
-			FileStore:     &mock.FileStore{},
-		})
-		require.Error(t, err)
-		assert.EqualError(t, err, "at least one plugin is required")
 	})
 }
 

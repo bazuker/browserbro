@@ -3,6 +3,7 @@ package manager
 import (
 	"errors"
 	"fmt"
+	"github.com/bazuker/browserbro/pkg/fs/local"
 	"net/http"
 
 	"github.com/bazuker/browserbro/pkg/fs"
@@ -53,6 +54,21 @@ type Config struct {
 	Plugins []pluginsRegistry.Plugin
 }
 
+func DefaultManagerConfig() (Config, error) {
+	localFS, err := local.New(local.Config{BasePath: "/tmp/browserBro_files"})
+	if err != nil {
+		return Config{}, err
+	}
+	return Config{
+		ServerAddress:         ":10001",
+		FileStore:             localFS,
+		BrowserUserDataDir:    "/tmp/rod/user-data/browserBro_userData",
+		BrowserServerID:       1,
+		BrowserServiceURL:     "ws://localhost:7317",
+		BrowserMonitorEnabled: true,
+	}, nil
+}
+
 func New(cfg Config) (*Manager, error) {
 	// Required configurations.
 	if cfg.ServerAddress == "" {
@@ -60,9 +76,6 @@ func New(cfg Config) (*Manager, error) {
 	}
 	if cfg.FileStore == nil {
 		return nil, errors.New("file store is required")
-	}
-	if len(cfg.Plugins) == 0 {
-		return nil, errors.New("at least one plugin is required")
 	}
 
 	// Optional configurations.

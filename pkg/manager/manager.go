@@ -3,10 +3,10 @@ package manager
 import (
 	"errors"
 	"fmt"
-	"github.com/bazuker/browserbro/pkg/fs/local"
 	"net/http"
 
 	"github.com/bazuker/browserbro/pkg/fs"
+	"github.com/bazuker/browserbro/pkg/fs/local"
 	fsEndpoints "github.com/bazuker/browserbro/pkg/manager/fs"
 	"github.com/bazuker/browserbro/pkg/manager/healthcheck"
 	"github.com/bazuker/browserbro/pkg/manager/helper"

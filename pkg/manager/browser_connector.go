@@ -46,8 +46,10 @@ func (br *browserConnector) Connect() (err error) {
 	if err != nil {
 		return err
 	}
+	l.NoSandbox(true)
 	l.Set("--disable-blink-features", "AutomationControlled")
 	l.Delete("enable-automation")
+	l.Delete("disable-site-isolation-trials")
 
 	br.browser.Client(l.MustClient())
 	err = br.browser.Connect()
